@@ -4,7 +4,6 @@ import oemof.solph as solph
 # coefficient value if provided
 FLOW_DEFAULT = solph.Flow().__dict__
 flow_default = FLOW_DEFAULT
-import ipdb
 
 INVESTMENT_DEFAULT = solph.options.Investment().__dict__
 NON_CONVEX_DEFAULT = solph.options.NonConvex().__dict__
@@ -92,7 +91,6 @@ def parse_flow(flow):
                 except:
                     print(p)
                     print(pval)
-                    ipdb.set_trace()
 
             if FLOW_DEFAULT[p] != pval:
                 if p == "investment":
@@ -371,10 +369,3 @@ class ESCodeRenderer:
         answer.append("")
 
         return answer
-
-
-# why can one retrieve the conversion factors.... ?
-
-cr = ESCodeRenderer(model)
-cr.print()
-
