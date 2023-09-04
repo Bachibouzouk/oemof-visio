@@ -226,6 +226,7 @@ class ESCodeRenderer:
         answer = [""]
         for bus in self.busses:
             answer.append(f"{bus.label} = solph.Bus(label='{bus.label}')")
+            answer.append(f"{self.es_variable_name}.add({bus.label})")
         answer.append("")
         return answer
 
