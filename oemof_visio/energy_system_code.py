@@ -1,5 +1,6 @@
 import subprocess
 import oemof.solph as solph
+import pandas as pd
 
 z_version = 1
 OEMOF_0_5_X_RELEASE = False
@@ -204,11 +205,15 @@ class ESCodeRenderer:
     def print_import_statements(self):
         answer = [""]
         answer.append("import oemof.solph as solph")
+        answer.append("from pandas import DatetimeIndex")
         answer.append("")
         return answer
 
+    def print_timeindex(self):
+        return ["", f"tindex = {self.energy_system.timeindex.__str__()}", ""]
+
     def print_es_definition(self):
-        return ["", f"{self.es_variable_name} = solph.EnergySystem()", ""]
+        return ["", f"{self.es_variable_name} = solph.EnergySystem(timeindex=tindex)", ""]
 
     def print_busses(self):
         answer = [""]
