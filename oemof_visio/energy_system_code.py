@@ -1,12 +1,44 @@
 import oemof.solph as solph
 
+z_version = 1
+OEMOF_0_5_X_RELEASE = False
+OEMOF_0_5_1_RELEASE = False
+if solph.__version__[:3] == "0.4":
+    from oemof.solph import (
+        Source,
+        Sink,
+        Transformer
+    )
+    from oemof.solph.plumbing import _Sequence as sequence
 
+    SOLPH_INVESTMENT = "solph.options.Investment"
+    SOLPH_NON_CONVEX = "solph.options.NonConvex"
+    INVESTMENT_DEFAULT = solph.options.Investment().__dict__
+    NON_CONVEX_DEFAULT = solph.options.NonConvex().__dict__
+
+
+else:
+    OEMOF_0_5_X_RELEASE = True
+    from oemof.solph._plumbing import _Sequence as sequence
+    from oemof.solph.components import (
+        Source,
+        Sink,
+    )
+    if solph.__version__[:3] == "0.5" and int(solph.__version__.split(".")[2]) >= z_version:
+        OEMOF_0_5_1_RELEASE = True
+        from oemof.solph.components import Converter as Transformer
+    else:
+        from oemof.solph.components import Transformer
+
+    SOLPH_INVESTMENT = "solph.Investment"
+    SOLPH_NON_CONVEX = "solph.NonConvex"
+    INVESTMENT_DEFAULT = solph.Investment().__dict__
+    NON_CONVEX_DEFAULT = solph.NonConvex().__dict__
 # coefficient value if provided
 FLOW_DEFAULT = solph.Flow().__dict__
 flow_default = FLOW_DEFAULT
 
-INVESTMENT_DEFAULT = solph.options.Investment().__dict__
-NON_CONVEX_DEFAULT = solph.options.NonConvex().__dict__
+
 
 
 def is_bus_flow_dict(d):
@@ -30,7 +62,7 @@ def parse_investment(inv):
                 investment_arguments.append(f"{p}={pval}")
         else:
             investment_arguments.append(f"{p}={pval}")
-    return f"solph.options.Investment({', '.join(investment_arguments)})"
+    return f"{SOLPH_INVESTMENT}({', '.join(investment_arguments)})"
 
 
 def parse_sequence(v):
@@ -48,7 +80,7 @@ def parse_sequence(v):
 def parse_class_dict(adict, default={}):
     instance_arguments = []
     for p, pval in adict.items():
-        if isinstance(pval, solph.plumbing._Sequence):
+        if isinstance(pval, sequence):
             pval = parse_sequence(pval)
         if p in default:
             if default[p] != pval:
@@ -64,7 +96,7 @@ def parse_class_dict(adict, default={}):
 def parse_nonconvex(nonconvex):
     nonconvex_arguments = []
     for p, pval in nonconvex.__dict__.items():
-        if isinstance(pval, solph.plumbing._Sequence):
+        if isinstance(pval, sequence):
             pval = parse_sequence(pval)
         if isinstance(pval, dict):
             pval = parse_class_dict(
@@ -77,7 +109,7 @@ def parse_nonconvex(nonconvex):
             if p[0] != "_":
                 nonconvex_arguments.append(f"{p}={pval}")
 
-    return f"solph.options.NonConvex({', '.join(nonconvex_arguments)})"
+    return f"{SOLPH_NON_CONVEX}({', '.join(nonconvex_arguments)})"
 
 
 def parse_flow(flow):
@@ -119,11 +151,11 @@ class ESCodeRenderer:
         self.es_variable_name = "energy_system"
         self.busses = [n for n in self.energy_system.nodes if isinstance(n, solph.Bus)]
         self.sources = [
-            n for n in self.energy_system.nodes if isinstance(n, solph.Source)
+            n for n in self.energy_system.nodes if isinstance(n, Source)
         ]
-        self.sinks = [n for n in self.energy_system.nodes if isinstance(n, solph.Sink)]
+        self.sinks = [n for n in self.energy_system.nodes if isinstance(n, Sink)]
         self.transformers = [
-            n for n in self.energy_system.nodes if isinstance(n, solph.Transformer)
+            n for n in self.energy_system.nodes if isinstance(n, Transformer)
         ]
         self.storages = [
             n
@@ -205,7 +237,12 @@ class ESCodeRenderer:
         all_args["conversion_factors"] = "{" + ", ".join(conv_factors) + "}"
 
         answer = []
-        answer.append(f"{variable_name} = solph.Transformer(")
+        if OEMOF_0_5_1_RELEASE is True:
+            answer.append(f"{variable_name} = solph.components.Converter(")
+        elif OEMOF_0_5_X_RELEASE is True:
+            answer.append(f"{variable_name} = solph.components.Source(")
+        else:
+            answer.append(f"{variable_name} = solph.Transformer(")
         for a, v in all_args.items():
             answer.append("  " + f"{a}={v},")
         answer.append(")")
@@ -261,7 +298,10 @@ class ESCodeRenderer:
         all_args["outputs"] = "{" + ", ".join(output_params) + "}"
 
         answer = []
-        answer.append(f"{variable_name} = solph.Source(")
+        if OEMOF_0_5_X_RELEASE is True:
+            answer.append(f"{variable_name} = solph.components.Source(")
+        else:
+            answer.append(f"{variable_name} = solph.Source(")
         for a, v in all_args.items():
             answer.append("  " + f"{a}={v},")
         answer.append(")")
@@ -286,7 +326,10 @@ class ESCodeRenderer:
         all_args["inputs"] = "{" + ", ".join(input_params) + "}"
 
         answer = []
-        answer.append(f"{variable_name} = solph.Sink(")
+        if OEMOF_0_5_X_RELEASE is True:
+            answer.append(f"{variable_name} = solph.components.Sink(")
+        else:
+            answer.append(f"{variable_name} = solph.Sink(")
         for a, v in all_args.items():
             answer.append("  " + f"{a}={v},")
         answer.append(")")
@@ -308,7 +351,7 @@ class ESCodeRenderer:
 
     def print_single_storage(self, s, variable_name="s"):
         return self.print_custom(
-            s, variable_name, component_name="solph.component.GenericStorage"
+            s, variable_name, component_name="solph.components.GenericStorage"
         )
 
     def print_extraction_turbines(self):
@@ -323,7 +366,7 @@ class ESCodeRenderer:
 
     def print_single_extraction_turbine(self, s, variable_name="s"):
         return self.print_custom(
-            s, variable_name, component_name="solph.component.ExtractionTurbineCHP"
+            s, variable_name, component_name="solph.components.ExtractionTurbineCHP"
         )
 
     def print_offet_transformers(self):
@@ -338,10 +381,10 @@ class ESCodeRenderer:
 
     def print_single_offet_transformer(self, t, variable_name="s"):
         return self.print_custom(
-            t, variable_name, component_name="solph.component.OffsetTransformer"
+            t, variable_name, component_name="solph.components.OffsetTransformer"
         )
 
-    def print_custom(self, s, variable_name="s", component_name="solph.component"):
+    def print_custom(self, s, variable_name="s", component_name="solph.components"):
         all_args = {}
         all_args["label"] = f"'{s.label}'"
         input_params = parse_bus_flow_dict(s.inputs)
@@ -355,7 +398,7 @@ class ESCodeRenderer:
                 dict_arguments = parse_bus_flow_dict(v)
                 all_args[k] = "{" + ", ".join(dict_arguments) + "}"
             elif k[0] != "_":
-                if isinstance(v, solph.plumbing._Sequence):
+                if isinstance(v, sequence):
                     v = parse_sequence(v)
                 all_args[k] = v
 
