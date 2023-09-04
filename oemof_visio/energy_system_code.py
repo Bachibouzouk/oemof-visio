@@ -1,3 +1,4 @@
+import subprocess
 import oemof.solph as solph
 
 z_version = 1
@@ -179,9 +180,9 @@ class ESCodeRenderer:
         ]
 
     def print(self, fname=None):
-        if fname is None:
-            answer = (
+        answer = (
                 self.print_import_statements()
+                + self.print_timeindex()
                 + self.print_es_definition()
                 + self.print_busses()
                 + self.print_transformers()
@@ -191,10 +192,15 @@ class ESCodeRenderer:
                 + self.print_storages()
                 + self.print_sources()
                 + self.print_sinks()
-            )
+                + self.print_model_definition()
+        )
+        if fname is None:
             for l in answer:
                 print(l)
-
+        else:
+            with open(fname,"w") as fp:
+                fp.writelines(f"{l}\n" for l in answer)
+            subprocess.run(["black", fname])
     def print_import_statements(self):
         answer = [""]
         answer.append("import oemof.solph as solph")
