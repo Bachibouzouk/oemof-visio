@@ -215,6 +215,13 @@ class ESCodeRenderer:
     def print_es_definition(self):
         return ["", f"{self.es_variable_name} = solph.EnergySystem(timeindex=tindex)", ""]
 
+    def print_model_definition(self):
+        answer = [""]
+        answer.append(f"om = solph.Model({self.es_variable_name})")
+        answer.append('om.write("rendered_lp_file.lp", io_options={"symbolic_solver_labels": True})')
+        answer.append('om.solve(solver="cbc", solve_kwargs={"tee": True})')
+        return answer
+
     def print_busses(self):
         answer = [""]
         for bus in self.busses:
